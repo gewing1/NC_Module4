@@ -168,8 +168,16 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
 .put(authenticate.verifyUser, (req, res, next) => {
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
+////////// FIX 1.1: Right logic, wrong placememnt. It is better to first test and make sure we have both a campsite and a comment
+// before testing for the author. I will switch the order of the these IF statements.
+// OLD CODE:
+/*
         if (campsite.comments.id(req.params.commentId).author._id.equals(req.user._id)) {
             if (campsite && campsite.comments.id(req.params.commentId)) {
+*/
+        if (campsite && campsite.comments.id(req.params.commentId)) {
+            if (campsite.comments.id(req.params.commentId).author._id.equals(req.user._id)) {
+////////// END FIX 1.1
                 if (req.body.rating) {
                     campsite.comments.id(req.params.commentId).rating = req.body.rating;
                 }
@@ -183,6 +191,11 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
                     res.json(campsite);
                 })
                 .catch(err => next(err));
+////////// FIX 1.2: Just switching the order of your ELSE clauses to match the switched IFs above.
+// Also note that I changed the status codes in all error messages to 403. The lessons incorrectly
+// identified the errors as 404 (file not found) when they should be 403 (forbidden).
+// OLD CODE:
+/*
             } else if (!campsite) {
                 err = new Error(`Campsite ${req.params.campsiteId} not found`);
                 err.status = 404;
@@ -197,14 +210,37 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
             err.status = 403;
             return next(err);
         }
+*/
+            } else {
+                const err = new Error("You are not the author of the comment.");
+                err.status = 403;
+                return next(err);
+            }
+        } else if (!campsite) {
+            const err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 403;
+            return next(err);
+        } else {
+            const err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 403;
+            return next(err);
+        }
+////////// END FIX 1.2
     })
     .catch(err => next(err));
 })
 .delete(authenticate.verifyUser, (req, res, next) => {
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
+////////// FIX 2.1: Same as the PUT request rules above. The order of these IFs should be switched.
+// OLD CODE:
+/*
         if (campsite.comments.id(req.params.commentId).author._id.equals(req.user._id)) {
             if (campsite && campsite.comments.id(req.params.commentId)) {
+*/
+        if (campsite && campsite.comments.id(req.params.commentId)) {
+            if (campsite.comments.id(req.params.commentId).author._id.equals(req.user._id)) {
+////////// END FIX 2.1
                 campsite.comments.id(req.params.commentId).remove();
                 campsite.save()
                 .then(campsite => {
@@ -213,6 +249,9 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
                     res.json(campsite);
                 })
                 .catch(err => next(err));
+////////// FIX 2.2: Switching the order of the ELSE clauses to match if IFs above. Also, I changed the status codes from 404 to 403.
+// OLD CODE:
+/*
             } else if (!campsite) {
                 err = new Error(`Campsite ${req.params.campsiteId} not found`);
                 err.status = 404;
@@ -227,6 +266,22 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
             err.status = 403;
             return next(err);
         }
+*/
+            } else {
+                const err = new Error("You are not the author of the comment.");
+                err.status = 403;
+                return next(err);
+            }
+        } else if (!campsite) {
+            const err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 403;
+            return next(err);
+        } else {
+            const err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 403;
+            return next(err);
+        }
+//////////END FIX 2.2
     })
     .catch(err => next(err));
 });
